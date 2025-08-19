@@ -3,6 +3,7 @@
   "type": "module",
   "version": "2.0.4",
   "private": false,
+  "main": "dist-electron/main.cjs",
   "description": "WeChat Markdown Editor | 一款高度简洁的微信 Markdown 编辑器：支持 Markdown 语法、自定义主题样式、内容管理、多图床、AI 助手等特性",
   "homepage": "https://github.com/doocs/md",
   "repository": {
@@ -32,7 +33,12 @@
     "lint": "eslint . --fix",
     "type-check": "vue-tsc --build --force",
     "postinstall": "simple-git-hooks && wxt prepare",
-    "package:extension": "npm --prefix ./src/extension run package"
+    "package:extension": "npm --prefix ./src/extension run package",
+    "electron:dev": "node scripts/electron-dev.js",
+    "electron:build": "npm run build && npm run build:electron",
+    "build:electron": "node scripts/build-electron.js",
+    "dist:electron": "npm run build:electron && electron-builder",
+    "pack:electron": "npm run build:electron && electron-builder --dir"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.777.0",
@@ -93,7 +99,10 @@
     "@unocss/eslint-plugin": "^66.3.3",
     "@vitejs/plugin-vue": "^5.2.1",
     "autoprefixer": "^10.4.20",
+    "concurrently": "^9.2.0",
     "cross-env": "^7.0.3",
+    "electron": "^37.3.0",
+    "electron-builder": "^26.0.12",
     "eslint": "^9.32.0",
     "eslint-plugin-format": "^1.0.1",
     "less": "^4.2.2",
@@ -113,6 +122,7 @@
     "vite-plugin-radar": "^0.10.0",
     "vite-plugin-vue-devtools": "^7.7.2",
     "vue-tsc": "^2.2.0",
+    "wait-on": "^8.0.4",
     "wrangler": "^4.12.0",
     "wxt": "^0.20.7"
   },
@@ -121,5 +131,66 @@
   },
   "lint-staged": {
     "*": "npm run lint"
+  },
+  "build": {
+    "appId": "com.doocs.md",
+    "productName": "MD Editor",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*",
+      "!dist-electron/*.ts"
+    ],
+    "extraMetadata": {
+      "main": "dist-electron/main.cjs"
+    },
+    "mac": {
+      "category": "public.app-category.productivity",
+      "icon": "public/mpmd/icon-256.png",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": ["x64", "arm64"]
+        },
+        {
+          "target": "zip",
+          "arch": ["x64", "arm64"]
+        }
+      ]
+    },
+    "win": {
+      "icon": "public/mpmd/icon-256.png",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        },
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        }
+      ]
+    },
+    "linux": {
+      "icon": "public/mpmd/icon-256.png",
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": ["x64"]
+        },
+        {
+          "target": "deb",
+          "arch": ["x64"]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
   }
 }

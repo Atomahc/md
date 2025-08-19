@@ -20,6 +20,7 @@ import { fileUpload } from '@/utils/file'
 
 const store = useStore()
 const displayStore = useDisplayStore()
+const electronApp = useElectron()
 
 const { isDark, output, editor } = storeToRefs(store)
 const { editorRefresh } = store
@@ -422,6 +423,48 @@ onMounted(() => {
 // 销毁，清理定时器
 onUnmounted(() => {
   clearTimeout(historyTimer.value)
+})
+
+// Electron 集成
+onMounted(() => {
+  // 初始化 Electron 功能
+  const cleanup = electronApp.init({
+    onSave: () => {
+      // 保存当前编辑器内容
+      const currentContent = editor.value?.getValue() || ''
+      electronApp.saveFile(currentContent)
+    },
+    onSaveAs: () => {
+      // 另存为当前编辑器内容
+      const currentContent = editor.value?.getValue() || ''
+      electronApp.saveFile(currentContent, true)
+    },
+    onOpen: (data) => {
+      // 打开文件到编辑器
+      if (editor.value) {
+        editor.value.setValue(data.content)
+        electronApp.markModified()
+      }
+    },
+    onNew: () => {
+      // 新建文档
+      if (editor.value) {
+        editor.value.setValue('')
+      }
+    }
+  })
+
+  // 监听编辑器内容变化，标记文件已修改
+  if (electronApp.isElectron && editor.value) {
+    editor.value.on('change', () => {
+      electronApp.markModified()
+    })
+  }
+
+  // 销毁时清理
+  onUnmounted(() => {
+    cleanup?.()
+  })
 })
 </script>
 

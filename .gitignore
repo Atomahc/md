@@ -48,6 +48,10 @@ public/upload/**
 
 # Package manager lock file
 # package-lock.json
+
+# Electron
+electron-dist/
+release/
 yarn.lock
 pnpm-lock.yaml
 auto-imports.d.ts

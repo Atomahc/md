@@ -6,10 +6,15 @@ import {
   PanelLeftOpen,
   Settings,
   Sun,
+  MinusIcon,
+  SquareIcon,
+  CopyIcon,
+  XIcon,
 } from 'lucide-vue-next'
 import { altSign, ctrlKey, ctrlSign, shiftSign } from '@/config'
 import { useStore } from '@/stores'
 import { addPrefix, processClipboardContent } from '@/utils'
+import { isElectron } from '@/utils/platform'
 
 const emit = defineEmits([`startCopy`, `endCopy`])
 
@@ -92,6 +97,49 @@ const { copy: copyContent } = useClipboard({
   legacy: true,
 })
 
+// 窗口控制状态
+const isMaximized = ref(false)
+
+// 窗口控制函数
+const minimizeWindow = async () => {
+  if (isElectron() && window.electronAPI) {
+    await window.electronAPI.windowMinimize()
+  }
+}
+
+const toggleMaximize = async () => {
+  if (isElectron() && window.electronAPI) {
+    await window.electronAPI.windowMaximize()
+    // 更新最大化状态
+    isMaximized.value = await window.electronAPI.windowIsMaximized()
+  }
+}
+
+const closeWindow = async () => {
+  if (isElectron() && window.electronAPI) {
+    await window.electronAPI.windowClose()
+  }
+}
+
+// 检查窗口状态
+const checkWindowState = async () => {
+  if (isElectron() && window.electronAPI) {
+    isMaximized.value = await window.electronAPI.windowIsMaximized()
+  }
+}
+
+onMounted(() => {
+  if (isElectron()) {
+    checkWindowState()
+    // 定期检查窗口状态
+    const interval = setInterval(checkWindowState, 500)
+    
+    onUnmounted(() => {
+      clearInterval(interval)
+    })
+  }
+})
+
 // 复制到微信公众号
 async function copy() {
   // 如果是 Markdown 源码，直接复制并返回
@@ -165,9 +213,10 @@ async function copy() {
 <template>
   <header
     class="header-container h-15 flex flex-wrap items-center justify-between px-5 dark:bg-[#191c20]"
+    :class="{ 'electron-draggable': isElectron() }"
   >
     <!-- 左侧菜单：移动端隐藏 -->
-    <div class="space-x-2 hidden sm:flex">
+    <div class="space-x-2 hidden sm:flex electron-no-drag">
       <Menubar class="menubar">
         <FileDropdown />
 
@@ -215,7 +264,7 @@ async function copy() {
     </div>
 
     <!-- 右侧操作区：移动端保留核心按钮 -->
-    <div class="space-x-2 flex flex-wrap">
+    <div class="space-x-2 flex flex-wrap electron-no-drag">
       <!-- 展开/收起左侧内容栏 -->
       <Button
         variant="outline"
@@ -276,6 +325,34 @@ async function copy() {
       >
         <Settings class="size-4" />
       </Button>
+
+      <!-- Electron 窗口控制按钮 -->
+      <div v-if="isElectron()" class="window-controls flex">
+        <button 
+          class="window-control-btn minimize-btn" 
+          @click="minimizeWindow"
+          title="最小化"
+        >
+          <MinusIcon class="w-3 h-3" />
+        </button>
+        
+        <button 
+          class="window-control-btn maximize-btn" 
+          @click="toggleMaximize"
+          :title="isMaximized ? '还原' : '最大化'"
+        >
+          <SquareIcon v-if="!isMaximized" class="w-3 h-3" />
+          <CopyIcon v-else class="w-3 h-3" />
+        </button>
+        
+        <button 
+          class="window-control-btn close-btn" 
+          @click="closeWindow"
+          title="关闭"
+        >
+          <XIcon class="w-3 h-3" />
+        </button>
+      </div>
     </div>
   </header>
 </template>
@@ -292,5 +369,64 @@ kbd {
   border: 1px solid #a8a8a8;
   padding: 1px 4px;
   border-radius: 2px;
+}
+
+/* Electron 拖拽样式 */
+.electron-draggable {
+  -webkit-app-region: drag;
+}
+
+.electron-no-drag {
+  -webkit-app-region: no-drag;
+}
+
+/* 窗口控制按钮样式 */
+.window-controls {
+  -webkit-app-region: no-drag;
+}
+
+.window-control-btn {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: #6b7280;
+  transition: all 0.2s ease;
+  margin-left: 1px;
+}
+
+.window-control-btn:hover {
+  background-color: #e5e7eb;
+}
+
+.dark .window-control-btn {
+  color: #9ca3af;
+}
+
+.dark .window-control-btn:hover {
+  background-color: #374151;
+}
+
+.minimize-btn:hover,
+.maximize-btn:hover {
+  color: #1f2937;
+}
+
+.dark .minimize-btn:hover,
+.dark .maximize-btn:hover {
+  color: #e5e7eb;
+}
+
+.close-btn:hover {
+  background-color: #ef4444;
+  color: white;
+}
+
+.close-btn:active {
+  background-color: #dc2626;
 }
 </style>
